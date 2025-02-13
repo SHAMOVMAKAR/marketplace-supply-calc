@@ -1,19 +1,34 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*- 
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask_migrate import Migrate
+from datetime import datetime
+import os
 
 app = Flask(__name__)
 
 # Настройки базы данных
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['JWT_SECRET_KEY'] = 'super-secret-key'  # Секретный ключ для токенов
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'super-secret-key') # Используем переменную окружения
 
+# Инициализация базы данных и миграции
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
+
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
+
+# Модель для хранения API-ключей
+class APIKey(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    marketplace = db.Column(db.String(50), nullable=False)  # WB, Ozon, Yandex
+    api_key = db.Column(db.String(255), nullable=False)
+
+    user = db.relationship('User', backref=db.backref('api_keys', lazy=True))
 
 # Модель пользователя
 class User(db.Model):
@@ -21,10 +36,7 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
-
-# Создаем базу данных
-with app.app_context():
-    db.create_all()
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Новое поле
 
 # Регистрация пользователя
 @app.route('/register', methods=['POST'])
