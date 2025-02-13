@@ -10,6 +10,7 @@ asttokens==2.4.1
 async-lru==2.0.4
 attrs==23.2.0
 Babel==2.14.0
+bcrypt==4.2.1
 beautifulsoup4==4.12.3
 bleach==6.1.0
 blinker==1.9.0
@@ -29,6 +30,9 @@ et-xmlfile==1.1.0
 executing==2.0.1
 fastjsonschema==2.19.1
 Flask==3.1.0
+Flask-Bcrypt==1.0.1
+Flask-JWT-Extended==4.7.1
+Flask-SQLAlchemy==3.1.1
 fqdn==1.5.1
 google-auth==2.29.0
 google-auth-oauthlib==1.2.0
@@ -95,6 +99,7 @@ pyasn1==0.6.0
 pyasn1_modules==0.4.0
 pycparser==2.22
 Pygments==2.17.2
+PyJWT==2.10.1
 PySocks==1.7.1
 python-dateutil==2.9.0.post0
 python-json-logger==2.0.7
