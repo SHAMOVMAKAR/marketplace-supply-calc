@@ -2,7 +2,7 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
-from flask_jwt_extended import JWTManager, create_access_token
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 
 app = Flask(__name__)
 
@@ -37,6 +37,31 @@ def register():
     db.session.commit()
     
     return jsonify({'message': 'Пользователь зарегистрирован!'})
+
+# Авторизация (логин)
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    user = User.query.filter_by(email=data['email']).first()
+
+    if user and bcrypt.check_password_hash(user.password, data['password']):
+        access_token = create_access_token(identity=str(user.id))
+        return jsonify({'access_token': access_token})
+    
+    return jsonify({'message': 'Неверный email или пароль'}), 401
+
+# Получение информации о пользователе (только для авторизованных)
+@app.route('/profile', methods=['GET'])
+@jwt_required()
+def profile():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+
+    return jsonify({
+        "id": user.id,
+        "username": user.username,
+        "email": user.email
+    })
 
 if __name__ == '__main__':
     app.run(debug=True)
