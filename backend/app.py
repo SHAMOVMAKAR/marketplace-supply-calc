@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*- 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
@@ -8,6 +8,10 @@ from datetime import datetime
 import os
 
 app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 # Настройки базы данных
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
@@ -74,6 +78,55 @@ def profile():
         "username": user.username,
         "email": user.email
     })
+
+@app.route('/add_api_key', methods=['POST'])
+@jwt_required()
+def add_api_key():
+    current_user_id = get_jwt_identity()
+    data = request.get_json()
+
+    marketplace = data.get('marketplace')
+    api_key = data.get('api_key')
+
+    if not marketplace or not api_key:
+        return jsonify({"error": "Необходимо указать marketplace и api_key"}), 400
+
+    new_key = APIKey(user_id=current_user_id, marketplace=marketplace, api_key=api_key)
+    db.session.add(new_key)
+    db.session.commit()
+
+    return jsonify({"message": f"API-ключ для {marketplace} сохранен"}), 201
+
+@app.route('/get_api_keys', methods=['GET'])
+@jwt_required()
+def get_api_keys():
+    current_user_id = get_jwt_identity()
+    keys = APIKey.query.filter_by(user_id=current_user_id).all()
+
+    return jsonify([
+        {"marketplace": key.marketplace, "api_key": key.api_key} for key in keys
+    ])
+
+@app.route('/delete_api_key', methods=['DELETE'])
+@jwt_required()
+def delete_api_key():
+    current_user_id = get_jwt_identity()
+    data = request.get_json()
+    marketplace = data.get('marketplace')
+
+    if not marketplace:
+        return jsonify({"error": "Необходимо указать marketplace"}), 400
+
+    key = APIKey.query.filter_by(user_id=current_user_id, marketplace=marketplace).first()
+    
+    if not key:
+        return jsonify({"error": f"API-ключ для {marketplace} не найден"}), 404
+
+    db.session.delete(key)
+    db.session.commit()
+
+    return jsonify({"message": f"API-ключ для {marketplace} удален"}), 200
+
 
 if __name__ == '__main__':
     app.run(debug=True)
